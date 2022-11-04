@@ -16,7 +16,11 @@
 #include "phasar/PhasarLLVM/DataFlowSolver/IfdsIde/Problems/IFDSLinearConstantAnalysis.h"
 #include "phasar/PhasarLLVM/DataFlowSolver/IfdsIde/Solver/IDESolver.h"
 #include "phasar/PhasarLLVM/DataFlowSolver/IfdsIde/Solver/IFDSSolver.h"
+#include "phasar/PhasarLLVM/Pointer/DynamicPointsToSetPtr.h"
 #include "phasar/PhasarLLVM/Pointer/LLVMPointsToSet.h"
+#include "phasar/PhasarLLVM/Pointer/LLVMBasedPointsToAnalysis.h"
+#include "phasar/PhasarLLVM/Pointer/PointsToInfo.h"
+#include "llvm/Analysis/AliasAnalysis.h"
 #include "phasar/PhasarLLVM/TypeHierarchy/LLVMTypeHierarchy.h"
 #include "phasar/Utils/Logger.h"
 
@@ -35,28 +39,20 @@ int main(int Argc, const char **Argv) {
     return 1;
   }
   ProjectIRDB DB({Argv[1]});
-  if (const auto *F = DB.getFunctionDefinition("main")) {
-    LLVMTypeHierarchy H(DB);
-    // print type hierarchy
-    H.print();
-    LLVMPointsToSet P(DB);
-    // print points-to information
-    P.print();
-    LLVMBasedICFG I(DB, CallGraphAnalysisType::OTF, {"main"}, &H, &P);
+  LLVMTypeHierarchy H(DB);
+  LLVMPointsToSet P(DB, true, PointerAnalysisType::CFLSteens);
+  //P.print();
+
+  if (auto *F = DB.getFunctionDefinition("test")) {
+    for (auto& A : F->args()) { 
+      A.dump(); 
+      DynamicPointsToSetConstPtr<psr::LLVMPointsToInfo::PointsToSetTy> pts = P.getPointsToSet(&A);
+      psr::LLVMPointsToInfo::PointsToSetTy set = *pts;
+      
+    }
     // print inter-procedural control-flow graph
-    I.print();
-    // IFDS template parametrization test
-    llvm::outs() << "Testing IFDS:\n";
-    IFDSLinearConstantAnalysis L(&DB, &H, &I, &P, {"main"});
-    IFDSSolver S(L);
-    S.solve();
-    S.dumpResults();
-    // IDE template parametrization test
-    llvm::outs() << "Testing IDE:\n";
-    IDELinearConstantAnalysis M(&DB, &H, &I, &P, {"main"});
-    IDESolver T(M);
-    T.solve();
-    T.dumpResults();
+
+    
   } else {
     llvm::errs() << "error: file does not contain a 'main' function!\n";
   }
