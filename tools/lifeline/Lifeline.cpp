@@ -9,6 +9,8 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iostream>
+#include<string>
 
 #include "phasar/DB/ProjectIRDB.h"
 #include "phasar/PhasarLLVM/ControlFlow/LLVMBasedICFG.h"
@@ -28,7 +30,47 @@ namespace llvm {
 class Value;
 } // namespace llvm
 
+
 using namespace psr;
+
+
+class LifetimeName{
+    private:
+      std::string name;       
+      unsigned int indirection;
+    public:
+      LifetimeName(std::string arg_name, unsigned int arg_indirection){
+        name = arg_name;
+        indirection = arg_indirection;
+      };
+      std::string str(){
+        std::string indirection_str = std::to_string(indirection);
+        indirection_str.insert(0, LifetimeName::name);
+        return indirection_str;
+      }
+};
+
+class NameGenerator{
+  private:
+    std::string prefix;       
+    char current;
+  public:            
+    NameGenerator() {     // Constructor
+      prefix = "";
+      current = 'a';
+    };
+    LifetimeName create () {
+      LifetimeName N(prefix + current, 0);
+      if(current == 'z'){
+        current = 'a';
+      }else{
+        current = current + 1;
+      }
+      return N;
+    };
+
+};
+
 
 int main(int Argc, const char **Argv) {
   if (Argc < 2 || !std::filesystem::exists(Argv[1]) ||
@@ -43,16 +85,26 @@ int main(int Argc, const char **Argv) {
   LLVMPointsToSet P(DB, true, PointerAnalysisType::CFLSteens);
   //P.print();
 
+  NameGenerator names;
   if (auto *F = DB.getFunctionDefinition("test")) {
     for (auto& A : F->args()) { 
-      A.dump(); 
-      DynamicPointsToSetConstPtr<psr::LLVMPointsToInfo::PointsToSetTy> pts = P.getPointsToSet(&A);
-      psr::LLVMPointsToInfo::PointsToSetTy set = *pts;
-      
-    }
-    // print inter-procedural control-flow graph
+      LifetimeName n = names.create();
 
-    
+      std::cout << "'" << n.str() << std::endl;
+      std::string argname;
+      llvm::raw_string_ostream aoutput(argname);
+      A.print(aoutput);
+      
+      std::cout << "A: " << argname << std::endl;
+
+      DynamicPointsToSetConstPtr<psr::LLVMPointsToInfo::PointsToSetTy> pts = P.getPointsToSet(&A);
+      for (const llvm::Value *const val : *pts){
+          std::string vname;
+          llvm::raw_string_ostream voutput(vname);
+          val->print(voutput);
+          std::cout << "   -> " << vname << std::endl;           
+      }
+    }
   } else {
     llvm::errs() << "error: file does not contain a 'main' function!\n";
   }

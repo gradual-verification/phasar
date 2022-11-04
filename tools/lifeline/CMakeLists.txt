@@ -2,12 +2,12 @@
 if(PHASAR_IN_TREE)
   # Build a small test tool to show how phasar may be used
   add_phasar_executable(lifeline
-    lifeline.cpp
+    Lifeline.cpp
   )
 else()
   # Build a small test tool to show how phasar may be used
   add_executable(lifeline
-    lifeline.cpp
+    Lifeline.cpp
   )
 endif()
 
