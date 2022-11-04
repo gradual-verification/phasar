@@ -60,5 +60,5 @@ RUN mkdir -p build && cd build && \
 
 RUN apt install vi vim
 RUN echo 'alias clang="clang-14"' >> ~/.bashrc && source ~/.bashrc
-ENTRYPOINT [ "./build/tools/lifeline/lifeline" ]
 WORKDIR /usr/src/phasar/tools/lifeline
+ENTRYPOINT [ "./build/tools/lifeline/lifeline" ]
